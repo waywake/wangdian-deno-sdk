@@ -1,4 +1,5 @@
 import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
+import { getLogger } from "https://deno.land/std@0.200.0/log/mod.ts";
 
 export interface IWangDianClientOptions {
     sid: string;
@@ -31,6 +32,8 @@ export class WangDianClient {
     private readonly secret: string;
     private readonly salt: string;
     private readonly apiUrl: string;
+
+    private logger = getLogger("wangdian_sdk");
 
     constructor(private options: IWangDianClientOptions) {
         this.sid = options.sid;
@@ -93,7 +96,12 @@ export class WangDianClient {
         data: object,
         pager?: WangDianPager
     ) {
-        const resp = await fetch(this.buildRequestUrl(method, data, pager), {
+        const url = this.buildRequestUrl(method, data, pager);
+        this.logger.debug(
+            `before request wangdian: ${url} ${JSON.stringify(data)}`
+        );
+
+        const resp = await fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -101,7 +109,13 @@ export class WangDianClient {
             body: JSON.stringify(data),
         });
 
-        const result = (await resp.json()) as WangDianResult<T>;
+        const resultText = await resp.text();
+        this.logger.debug(
+            `after request wangdian: ${JSON.stringify(resultText)}`
+        );
+
+        const result = JSON.parse(resultText) as WangDianResult<T>;
+
         if (!result) {
             throw new Error("invalid response");
         }
