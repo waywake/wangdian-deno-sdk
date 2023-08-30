@@ -1,4 +1,4 @@
-import { Md5 } from "https://deno.land/std@0.119.0/hash/md5.ts";
+import { crypto, toHashString } from "https://deno.land/std@0.200.0/crypto/mod.ts";
 import { getLogger } from "https://deno.land/std@0.200.0/log/mod.ts";
 
 export interface IWangDianClientOptions {
@@ -47,19 +47,22 @@ export class WangDianClient {
     }
 
     // 生成请求签名
-    private buildSign(params: Record<string, string>) {
+    private async buildSign(params: Record<string, string>) {
         const str = Object.keys(params)
             .filter((key) => key !== "sign")
             .sort()
             .map((key) => `${key}${params[key]}`)
             .join("");
 
-        return new Md5()
-            .update(this.secret + str + this.secret)
-            .toString("hex");
+        const digest = await crypto.subtle.digest(
+            "MD5",
+            new TextEncoder().encode(this.secret + str + this.secret)
+        );
+
+        return toHashString(digest);
     }
 
-    private buildRequestUrl(
+    private async buildRequestUrl(
         method: string,
         body: object,
         pager?: WangDianPager
@@ -82,7 +85,7 @@ export class WangDianClient {
             params["calc_total"] = pager.calcTotal.toString();
         }
 
-        params["sign"] = this.buildSign(params);
+        params["sign"] = await this.buildSign(params);
         delete params["body"];
 
         const queryParams = new URLSearchParams(params);
@@ -96,7 +99,7 @@ export class WangDianClient {
         data: object,
         pager?: WangDianPager
     ) {
-        const url = this.buildRequestUrl(method, data, pager);
+        const url = await this.buildRequestUrl(method, data, pager);
         this.logger.debug(
             `before request wangdian: ${url} ${JSON.stringify(data)}`
         );

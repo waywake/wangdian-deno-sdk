@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.199.0/assert/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import {
     WangDianClient as Client,
     WangDianPager as Pager,
